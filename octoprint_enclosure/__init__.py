@@ -1473,9 +1473,8 @@ class EnclosurePlugin(octoprint.plugin.StartupPlugin, octoprint.plugin.TemplateP
                         index_id = temp_hum_control['index_id']
                         if index_id in self.waiting_temperature:
                             self.waiting_temperature.remove(index_id)
-
-                        if not self.waiting_temperature and self._printer.is_paused():
-                            self._printer.resume_print()
+                            if self._printer.is_paused(): 
+                                self._printer.resume_print()
 
                         self._logger.info("Turning gpio to control temperature off.")
                         val = True if temp_hum_control['active_low'] else False
@@ -2281,8 +2280,12 @@ class EnclosurePlugin(octoprint.plugin.StartupPlugin, octoprint.plugin.TemplateP
                     set_value = self.to_float(self.get_gcode_value(cmd, 'S'))
                     should_wait = self.to_int(self.get_gcode_value(cmd, 'W'))
                     if should_wait == 1 and self._printer.is_printing():
-                        self._printer.pause_print()
-                        self.waiting_temperature.append(index_id)
+                        if set_value > 0:
+                            linked_data = self.get_linked_temp_sensor_data(index_id)
+                            current_value = self.to_float(linked_data['temperature'])
+                            if current_value < set_value:
+                                self._printer.pause_print()
+                                self.waiting_temperature.append(index_id)
                     output['temp_ctr_set_value'] = set_value
                     self.update_ui_set_temperature()
                     self.handle_temp_hum_control()
